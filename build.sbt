@@ -216,11 +216,17 @@ lazy val root = (project in file("."))
       pushChanges
     )
   )
-  .settings(
-    publishTo := Some("GitHub Packages" at "https://maven.pkg.github.com/valdo404/osm4scala"),
-    credentials += Credentials(Path.userHome / ".github" / ".credentials"),
-    publishMavenStyle := true
-  )
+
+ThisBuild / publishTo := {
+  val nexus = "https://maven.pkg.github.com/"
+  if (isSnapshot.value) // sbt-dynver sets isSnapshot
+    Some("GitHub Packages Snapshots" at nexus + "valdo404/osm4scala")
+  else
+    Some("GitHub Packages Releases" at nexus + "valdo404/osm4scala")
+}
+
+// ThisBuild / credentials += Credentials(Path.userHome / ".github" / ".credentials"), // Removed - Handled by GITHUB_TOKEN in Actions
+ThisBuild / publishMavenStyle := true
 
 lazy val core = Project(id = "core", base = file("core"))
   .disablePlugins(AssemblyPlugin)
