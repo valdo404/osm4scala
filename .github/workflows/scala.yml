@@ -23,6 +23,10 @@ jobs:
         java-version: '11'
         distribution: 'temurin'
         cache: 'sbt'
+    - name: Setup sbt
+      uses: coursier/setup-action@v1
+      with:
+        apps: sbt
     - name: Run tests
       run: sbt +test
 
@@ -44,6 +48,10 @@ jobs:
         java-version: '11'
         distribution: 'temurin'
         cache: 'sbt'
+    - name: Setup sbt
+      uses: coursier/setup-action@v1
+      with:
+        apps: sbt
     - name: Publish Snapshot to GitHub Packages
       run: sbt +publish
       env:
@@ -67,6 +75,10 @@ jobs:
         java-version: '11'
         distribution: 'temurin'
         cache: 'sbt'
+    - name: Setup sbt
+      uses: coursier/setup-action@v1
+      with:
+        apps: sbt
     - name: Extract version from tag
       id: extract_version
       run: echo "RELEASE_VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
