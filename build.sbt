@@ -43,6 +43,14 @@ lazy val scala211 = "2.11.12"
 lazy val scalaVersions = Seq(scala213, scala212)
 lazy val sparkScalaVersions = Seq(scala212)
 
+lazy val ghpResolverSetting = Def.setting {
+  val nexus = "https://maven.pkg.github.com/"
+  if (isSnapshot.value) // sbt-dynver sets isSnapshot
+    Some("GitHub Packages Snapshots" at nexus + "valdo404/osm4scala")
+  else
+    Some("GitHub Packages Releases" at nexus + "valdo404/osm4scala")
+}
+
 lazy val commonSettings = Seq(
   organization := "com.github.valdo404",
   ThisBuild / dynverSonatypeSnapshots := true, // Ensures SNAPSHOT is appended correctly for dynver
@@ -70,6 +78,7 @@ lazy val commonSettings = Seq(
     Developer(
       "valdo404",
       "Valdo404",
+      "",
       url("https://github.com/valdo404")
     )
   ),
@@ -126,7 +135,8 @@ def generateSparkFatShadedModule(sparkVersion: String, sparkPrj: Project): Proje
       disablingCoverage,
       name := s"osm4scala-spark${sparkVersion.head}-shaded",
       description := "Spark 3 connector for OpenStreetMap Pbf parser as shaded fat jar.",
-      Compile / packageBin := (sparkPrj / Compile/ assembly).value
+      Compile / packageBin := (sparkPrj / Compile/ assembly).value,
+      publishTo := ghpResolverSetting.value // Explicitly set publishTo for this module
     )
 
 def generateSparkModule(sparkVersion: String): Project = {
@@ -167,14 +177,14 @@ def generateSparkModule(sparkVersion: String): Project = {
         ShadeRule
           .rename("com.google.protobuf.**" -> "shadeproto.@1")
           .inAll
-      )
+      ),
+      publishTo := ghpResolverSetting.value // Explicitly set publishTo for this module
     )
     .dependsOn(core)
 }
 
 lazy val spark3 = generateSparkModule(spark3Version)
 lazy val spark3FatShaded = generateSparkFatShadedModule(spark3Version, spark3)
-
 
 def listOfProjects(): Seq[ProjectReference] = {
 
@@ -220,13 +230,7 @@ lazy val root = (project in file("."))
     )
   )
 
-ThisBuild / publishTo := {
-  val nexus = "https://maven.pkg.github.com/"
-  if (isSnapshot.value) // sbt-dynver sets isSnapshot
-    Some("GitHub Packages Snapshots" at nexus + "valdo404/osm4scala")
-  else
-    Some("GitHub Packages Releases" at nexus + "valdo404/osm4scala")
-}
+ThisBuild / publishMavenStyle := true
 
 ThisBuild / credentials += Credentials(
   "GitHub Package Registry",
@@ -234,7 +238,6 @@ ThisBuild / credentials += Credentials(
   "valdo404",
   System.getenv("GITHUB_TOKEN")
 )
-ThisBuild / publishMavenStyle := true
 
 lazy val core = Project(id = "core", base = file("core"))
   .disablePlugins(AssemblyPlugin)
@@ -246,7 +249,8 @@ lazy val core = Project(id = "core", base = file("core"))
     description := "Scala OpenStreetMap Pbf 2 parser. Core",
     Compile / PB.targets := Seq(
       scalapb.gen(grpc = false) -> (Compile / sourceManaged).value
-    )
+    ),
+    publishTo := ghpResolverSetting.value // Explicitly set publishTo for this module
   )
 
 // Examples
