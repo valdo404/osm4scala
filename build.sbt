@@ -26,6 +26,11 @@
 import sbt.Keys._
 import sbtrelease.ReleasePlugin.autoImport.ReleaseTransformations._
 import sbtrelease.ReleasePlugin.autoImport._
+import ReleaseTransformations._
+import scala.util.Try // Needed for SemVer parsing
+import scala.sys.process._ // Potentially needed for git commands (though vcs helper might suffice)
+import sbt.Project // Needed for Project.extract
+import ReleaseHelper._ // Import the custom logic
 
 // Dependencies
 lazy val scalatestVersion = "3.2.0"
@@ -53,7 +58,8 @@ lazy val ghpResolverSetting = Def.setting {
 
 lazy val commonSettings = Seq(
   organization := "com.github.valdo404",
-  ThisBuild / dynverSonatypeSnapshots := true, // Ensures SNAPSHOT is appended correctly for dynver
+  // ThisBuild / dynverSonatypeSnapshots := true, // Let dynver use its default snapshot handling
+  // ThisBuild / dynverSeparator := "-", // Use standard separator
   scalaVersion := scala212,
   crossScalaVersions := scalaVersions,
   organizationHomepage := Some(url("https://github.com/valdo404")),
@@ -210,18 +216,25 @@ lazy val root = (project in file("."))
   .settings(
     name := "osm4scala-root",
     crossScalaVersions := Nil,
-    publish / skip := true
-    // Let sbt-ci-release + dynver handle the release process
+    publish / skip := true,
+    libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2",
+
   )
-
-ThisBuild / publishMavenStyle := true
-
-ThisBuild / credentials += Credentials(
-  "GitHub Package Registry",
-  "maven.pkg.github.com",
-  "valdo404",
-  System.getenv("GITHUB_TOKEN")
-)
+  .settings(
+    releaseProcess := Seq[ReleaseStep](
+        checkSnapshotDependencies,
+        runClean,
+        ReleaseHelper.customTagReleaseBasedOnLast,
+        releaseStepCommand("ci-release"),
+        pushChanges
+    )
+  )
+  .settings(commonSettings: _*)
+  .settings(
+    name := "osm4scala-root",
+    crossScalaVersions := Nil,
+    publish / skip := true
+  )
 
 lazy val core = Project(id = "core", base = file("core"))
   .disablePlugins(AssemblyPlugin)
@@ -364,3 +377,12 @@ lazy val exampleSparkDocumentation = Project(id = "examples-spark-documentation"
     )
   )
   .dependsOn(spark3, commonUtilities)
+
+ThisBuild / publishMavenStyle := true
+
+ThisBuild / credentials += Credentials(
+  "GitHub Package Registry",
+  "maven.pkg.github.com",
+  "valdo404",
+  System.getenv("GITHUB_TOKEN")
+)
