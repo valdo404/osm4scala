@@ -5,3 +5,26 @@ project/project/
 tmp
 .bsp/
 .scannerwork
+
+# Scala
+*.class
+*.log
+
+# sbt
+project/target/
+lib_managed/
+.history
+
+# Bloop
+.bloop/
+
+# IDE specific files
+.idea_modules/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+.metals/
+.vscode/

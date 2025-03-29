@@ -27,8 +27,6 @@ import sbt.Keys._
 import sbtrelease.ReleasePlugin.autoImport.ReleaseTransformations._
 import sbtrelease.ReleasePlugin.autoImport._
 
-def isPatch211Enable(): Boolean = sys.env.getOrElse("PATCH_211", "false").toBoolean
-
 // Dependencies
 lazy val scalatestVersion = "3.2.0"
 lazy val scalacheckVersion = "1.14.3"
@@ -36,29 +34,38 @@ lazy val commonIOVersion = "2.5"
 lazy val logbackVersion = "1.1.7"
 lazy val scoptVersion = "3.7.1"
 lazy val akkaVersion = "2.5.31"
-lazy val spark3Version = "3.1.1"
-lazy val spark2Version = "2.4.7"
+lazy val spark3Version = "3.5.0"
 lazy val sparkDefaultVersion = spark3Version
 
-lazy val scala213 = "2.13.5"
-lazy val scala212 = "2.12.13"
+lazy val scala213 = "2.13.16"
+lazy val scala212 = "2.12.20"
 lazy val scala211 = "2.11.12"
-lazy val scalaVersions = if (isPatch211Enable()) Seq(scala211) else Seq(scala213, scala212)
-lazy val sparkScalaVersions = if (isPatch211Enable()) Seq(scala211) else Seq(scala212)
+lazy val scalaVersions = Seq(scala213, scala212)
+lazy val sparkScalaVersions = Seq(scala212)
+
+lazy val ghpResolverSetting = Def.setting {
+  val nexus = "https://maven.pkg.github.com/"
+  if (isSnapshot.value) // sbt-dynver sets isSnapshot
+    Some("GitHub Packages Snapshots" at nexus + "valdo404/osm4scala")
+  else
+    Some("GitHub Packages Releases" at nexus + "valdo404/osm4scala")
+}
 
 lazy val commonSettings = Seq(
+  organization := "com.github.valdo404",
+  ThisBuild / dynverSonatypeSnapshots := true, // Ensures SNAPSHOT is appended correctly for dynver
+  scalaVersion := scala212,
   crossScalaVersions := scalaVersions,
-  organization := "com.acervera.osm4scala",
-  organizationHomepage := Some(url("https://www.acervera.com")),
+  organizationHomepage := Some(url("https://github.com/valdo404")),
   licenses += ("MIT", url("https://opensource.org/licenses/MIT")),
   ThisBuild / homepage := Some(
-    url(s"https://simplexspatial.github.io/osm4scala/")
+    url(s"https://github.com/valdo404/osm4scala")
   ),
   ThisBuild / scmInfo := Some(
     ScmInfo(
-      url("https://github.com/simplexspatial/osm4scala"),
-      "scm:git:git://github.com/simplexspatial/osm4scala.git",
-      "scm:git:ssh://github.com:simplexspatial/osm4scala.git"
+      url("https://github.com/valdo404/osm4scala"),
+      "scm:git:git://github.com/valdo404/osm4scala.git",
+      "scm:git:ssh://github.com:valdo404/osm4scala.git"
     )
   ),
   ThisBuild / developers := List(
@@ -67,6 +74,12 @@ lazy val commonSettings = Seq(
       "Angel Cervera Claudio",
       "angelcervera@silyan.com",
       url("https://www.acervera.com")
+    ),
+    Developer(
+      "valdo404",
+      "Valdo404",
+      "",
+      url("https://github.com/valdo404")
     )
   ),
   libraryDependencies ++= Seq(
@@ -86,23 +99,15 @@ lazy val commonSettings = Seq(
   javacOptions ++= Seq(
     "-Xlint:all",
     "-source",
-    "1.8",
+    "11",
     "-target",
-    "1.8",
+    "11",
     "-parameters"
-  ),
-  usePgpKeyHex("A047A2C5A9AFE4850537A00DFC14CE4C2E7B7CBB"),
-  publishTo := sonatypePublishToBundle.value
+  )
 )
 
 lazy val disablingPublishingSettings =
   Seq(publish / skip := true, publishArtifact := false)
-
-lazy val enablingPublishingSettings = Seq(
-  publishArtifact := true, // Enable publish
-  publishMavenStyle := true,
-  Test / publishArtifact := false
-)
 
 lazy val disablingCoverage = Seq(coverageEnabled := false)
 
@@ -119,12 +124,11 @@ def generateSparkFatShadedModule(sparkVersion: String, sparkPrj: Project): Proje
     .disablePlugins(AssemblyPlugin)
     .settings(
       commonSettings,
-      crossScalaVersions := sparkScalaVersions,
-      enablingPublishingSettings,
       disablingCoverage,
       name := s"osm4scala-spark${sparkVersion.head}-shaded",
-      description := "Spark 2 connector for OpenStreetMap Pbf parser as shaded fat jar.",
-      Compile / packageBin := (sparkPrj / Compile/ assembly).value
+      description := "Spark 3 connector for OpenStreetMap Pbf parser as shaded fat jar.",
+      Compile / packageBin := (sparkPrj / Compile/ assembly).value,
+      publishTo := ghpResolverSetting.value // Explicitly set publishTo for this module
     )
 
 def generateSparkModule(sparkVersion: String): Project = {
@@ -150,11 +154,9 @@ def generateSparkModule(sparkVersion: String): Project = {
       Test / scalaSource          := baseDirectory.value / pathFromModule("src/test/scala"),
       Test / resourceDirectory    := baseDirectory.value / pathFromModule("src/test/resources"),
       Test / parallelExecution    := false,
-      crossScalaVersions := sparkScalaVersions,
-      enablingPublishingSettings,
       coverageConfig,
       name := s"osm4scala-spark${sparkVersion.head}",
-      description := "Spark 2 connector for OpenStreetMap Pbf parser.",
+      description := "Spark 3 connector for OpenStreetMap Pbf parser.",
       libraryDependencies ++= Seq(
         "org.apache.spark" %% "spark-sql" % sparkVersion % Provided
       ),
@@ -167,23 +169,19 @@ def generateSparkModule(sparkVersion: String): Project = {
         ShadeRule
           .rename("com.google.protobuf.**" -> "shadeproto.@1")
           .inAll
-      )
+      ),
+      publishTo := ghpResolverSetting.value // Explicitly set publishTo for this module
     )
     .dependsOn(core)
 }
 
-lazy val spark2 = generateSparkModule(spark2Version)
-lazy val spark2FatShaded = generateSparkFatShadedModule(spark2Version, spark2)
 lazy val spark3 = generateSparkModule(spark3Version)
 lazy val spark3FatShaded = generateSparkFatShadedModule(spark3Version, spark3)
-
 
 def listOfProjects(): Seq[ProjectReference] = {
 
   val modules: Seq[ProjectReference] = Seq(
     core,
-    spark2,
-    spark2FatShaded,
     commonUtilities,
     examplesCounter,
     examplesCounterParallel,
@@ -201,9 +199,7 @@ def listOfProjects(): Seq[ProjectReference] = {
     exampleSparkDocumentation
   )
 
-  val projects = modules ++ (if(isPatch211Enable()) Seq.empty else spark3Projects)
-
-  println(s"PATCH_211 is ${isPatch211Enable()} so we are going to work with this list of projects: \n${projects.mkString("\t- ", "\n\t- ", "")}")
+  val projects = modules ++ spark3Projects
 
   projects
 }
@@ -213,38 +209,32 @@ lazy val root = (project in file("."))
   .aggregate( listOfProjects(): _*)
   .settings(
     name := "osm4scala-root",
-    sonatypeProfileName := "com.acervera.osm4scala",
-    // crossScalaVersions must be set to Nil on the aggregating project
     crossScalaVersions := Nil,
-    publish / skip := true,
-    // don't use sbt-release's cross facility
-    releaseCrossBuild := false,
-    releaseProcess :=   Seq[ReleaseStep](
-      checkSnapshotDependencies,
-      inquireVersions,
-      runClean,
-      releaseStepCommandAndRemaining("+test"),
-      setReleaseVersion,
-      commitReleaseVersion,
-      tagRelease,
-      setNextVersion,
-      commitNextVersion,
-      pushChanges
-    )
+    publish / skip := true
+    // Let sbt-ci-release + dynver handle the release process
   )
+
+ThisBuild / publishMavenStyle := true
+
+ThisBuild / credentials += Credentials(
+  "GitHub Package Registry",
+  "maven.pkg.github.com",
+  "valdo404",
+  System.getenv("GITHUB_TOKEN")
+)
 
 lazy val core = Project(id = "core", base = file("core"))
   .disablePlugins(AssemblyPlugin)
   .settings(
     commonSettings,
-    enablingPublishingSettings,
     coverageConfig,
     coverageExcludedPackages := "org.openstreetmap.osmosis.osmbinary.*",
     name := "osm4scala-core",
     description := "Scala OpenStreetMap Pbf 2 parser. Core",
     Compile / PB.targets := Seq(
       scalapb.gen(grpc = false) -> (Compile / sourceManaged).value
-    )
+    ),
+    publishTo := ghpResolverSetting.value // Explicitly set publishTo for this module
   )
 
 // Examples
@@ -353,7 +343,6 @@ lazy val exampleSparkUtilities = Project(id = "examples-spark-utilities", base =
   .settings(
     commonSettings,
     exampleSettings,
-    crossScalaVersions := Seq(scala212),
     name := "osm4scala-examples-spark-utilities",
     description := "Example of different utilities using osm4scala and Spark.",
     libraryDependencies ++= Seq(
@@ -368,7 +357,6 @@ lazy val exampleSparkDocumentation = Project(id = "examples-spark-documentation"
   .settings(
     commonSettings,
     exampleSettings,
-    crossScalaVersions := Seq(scala212),
     name := "osm4scala-examples-spark-documentation",
     description := "Examples used in the documentation.",
     libraryDependencies ++= Seq(
