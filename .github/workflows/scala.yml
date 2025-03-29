@@ -86,16 +86,3 @@ jobs:
       run: sbt +publish
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: ${{ github.ref_name }}
-        name: Release ${{ env.RELEASE_VERSION }}
-        body: "Release notes for version ${{ env.RELEASE_VERSION }}" # You might want to generate this dynamically later
-        draft: false
-        prerelease: false
-        # files: | # Optional: Upload assets directly to release (if not using Packages primarily)
-        #   target/scala-*/core_*.jar
-        #   target/scala-*/osm4scala-assembly-*.jar
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
