@@ -225,7 +225,12 @@ ThisBuild / publishTo := {
     Some("GitHub Packages Releases" at nexus + "valdo404/osm4scala")
 }
 
-// ThisBuild / credentials += Credentials(Path.userHome / ".github" / ".credentials"), // Removed - Handled by GITHUB_TOKEN in Actions
+ThisBuild / credentials += Credentials(
+  "GitHub Package Registry",
+  "maven.pkg.github.com",
+  "valdo404",
+  System.getenv("GITHUB_TOKEN")
+)
 ThisBuild / publishMavenStyle := true
 
 lazy val core = Project(id = "core", base = file("core"))
