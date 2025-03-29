@@ -62,9 +62,14 @@ lazy val commonSettings = Seq(
   ),
   ThisBuild / developers := List(
     Developer(
+      "angelcervera",
+      "Angel Cervera Claudio",
+      "angelcervera@silyan.com",
+      url("https://www.acervera.com")
+    ),
+    Developer(
       "valdo404",
       "Valdo404",
-      "laurent.valdes+github@gmail.com",
       url("https://github.com/valdo404")
     )
   ),
@@ -193,8 +198,6 @@ def listOfProjects(): Seq[ProjectReference] = {
   )
 
   val projects = modules ++ spark3Projects
-
-  println(s"We are going to work with this list of projects: \n${projects.mkString("\t- ", "\n\t- ", "")}")
 
   projects
 }
