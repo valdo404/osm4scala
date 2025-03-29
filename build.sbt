@@ -103,14 +103,6 @@ lazy val commonSettings = Seq(
     "-target",
     "11",
     "-parameters"
-  ),
-  releaseProcess := Seq[ReleaseStep](
-    checkSnapshotDependencies,
-    inquireVersions,
-    runClean,
-    runTest,
-    tagRelease,
-    pushChanges
   )
 )
 
@@ -218,16 +210,8 @@ lazy val root = (project in file("."))
   .settings(
     name := "osm4scala-root",
     crossScalaVersions := Nil,
-    publish / skip := true,
-    releaseCrossBuild := false,
-    releaseProcess := Seq[ReleaseStep](
-      checkSnapshotDependencies,
-      inquireVersions,
-      runClean,
-      releaseStepCommandAndRemaining("+test"),
-      tagRelease,
-      pushChanges
-    )
+    publish / skip := true
+    // Let sbt-ci-release + dynver handle the release process
   )
 
 ThisBuild / publishMavenStyle := true
