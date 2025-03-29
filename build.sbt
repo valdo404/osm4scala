@@ -44,26 +44,28 @@ lazy val scalaVersions = Seq(scala213, scala212)
 lazy val sparkScalaVersions = Seq(scala212)
 
 lazy val commonSettings = Seq(
-  crossScalaVersions := Seq(scala213, scala212),
-  organization := "com.acervera.osm4scala",
-  organizationHomepage := Some(url("https://www.acervera.com")),
+  organization := "com.github.valdo404",
+  ThisBuild / dynverSonatypeSnapshots := true, // Ensures SNAPSHOT is appended correctly for dynver
+  scalaVersion := scala212,
+  crossScalaVersions := scalaVersions,
+  organizationHomepage := Some(url("https://github.com/valdo404")),
   licenses += ("MIT", url("https://opensource.org/licenses/MIT")),
   ThisBuild / homepage := Some(
-    url(s"https://simplexspatial.github.io/osm4scala/")
+    url(s"https://github.com/valdo404/osm4scala")
   ),
   ThisBuild / scmInfo := Some(
     ScmInfo(
-      url("https://github.com/simplexspatial/osm4scala"),
-      "scm:git:git://github.com/simplexspatial/osm4scala.git",
-      "scm:git:ssh://github.com:simplexspatial/osm4scala.git"
+      url("https://github.com/valdo404/osm4scala"),
+      "scm:git:git://github.com/valdo404/osm4scala.git",
+      "scm:git:ssh://github.com:valdo404/osm4scala.git"
     )
   ),
   ThisBuild / developers := List(
     Developer(
-      "angelcervera",
-      "Angel Cervera Claudio",
-      "angelcervera@silyan.com",
-      url("https://www.acervera.com")
+      "valdo404",
+      "Valdo404",
+      "laurent.valdes+github@gmail.com",
+      url("https://github.com/valdo404")
     )
   ),
   libraryDependencies ++= Seq(
@@ -83,23 +85,23 @@ lazy val commonSettings = Seq(
   javacOptions ++= Seq(
     "-Xlint:all",
     "-source",
-    "1.8",
+    "11",
     "-target",
-    "1.8",
+    "11",
     "-parameters"
   ),
-  usePgpKeyHex("A047A2C5A9AFE4850537A00DFC14CE4C2E7B7CBB"),
-  publishTo := sonatypePublishToBundle.value
+  releaseProcess := Seq[ReleaseStep](
+    checkSnapshotDependencies,
+    inquireVersions,
+    runClean,
+    runTest,
+    tagRelease,
+    pushChanges
+  )
 )
 
 lazy val disablingPublishingSettings =
   Seq(publish / skip := true, publishArtifact := false)
-
-lazy val enablingPublishingSettings = Seq(
-  publishArtifact := true, // Enable publish
-  publishMavenStyle := true,
-  Test / publishArtifact := false
-)
 
 lazy val disablingCoverage = Seq(coverageEnabled := false)
 
@@ -116,7 +118,6 @@ def generateSparkFatShadedModule(sparkVersion: String, sparkPrj: Project): Proje
     .disablePlugins(AssemblyPlugin)
     .settings(
       commonSettings,
-      enablingPublishingSettings,
       disablingCoverage,
       name := s"osm4scala-spark${sparkVersion.head}-shaded",
       description := "Spark 3 connector for OpenStreetMap Pbf parser as shaded fat jar.",
@@ -146,7 +147,6 @@ def generateSparkModule(sparkVersion: String): Project = {
       Test / scalaSource          := baseDirectory.value / pathFromModule("src/test/scala"),
       Test / resourceDirectory    := baseDirectory.value / pathFromModule("src/test/resources"),
       Test / parallelExecution    := false,
-      enablingPublishingSettings,
       coverageConfig,
       name := s"osm4scala-spark${sparkVersion.head}",
       description := "Spark 3 connector for OpenStreetMap Pbf parser.",
@@ -204,31 +204,28 @@ lazy val root = (project in file("."))
   .aggregate( listOfProjects(): _*)
   .settings(
     name := "osm4scala-root",
-    sonatypeProfileName := "com.acervera.osm4scala",
-    // crossScalaVersions must be set to Nil on the aggregating project
     crossScalaVersions := Nil,
     publish / skip := true,
-    // don't use sbt-release's cross facility
     releaseCrossBuild := false,
-    releaseProcess :=   Seq[ReleaseStep](
+    releaseProcess := Seq[ReleaseStep](
       checkSnapshotDependencies,
       inquireVersions,
       runClean,
       releaseStepCommandAndRemaining("+test"),
-      setReleaseVersion,
-      commitReleaseVersion,
       tagRelease,
-      setNextVersion,
-      commitNextVersion,
       pushChanges
     )
+  )
+  .settings(
+    publishTo := Some("GitHub Packages" at "https://maven.pkg.github.com/valdo404/osm4scala"),
+    credentials += Credentials(Path.userHome / ".github" / ".credentials"),
+    publishMavenStyle := true
   )
 
 lazy val core = Project(id = "core", base = file("core"))
   .disablePlugins(AssemblyPlugin)
   .settings(
     commonSettings,
-    enablingPublishingSettings,
     coverageConfig,
     coverageExcludedPackages := "org.openstreetmap.osmosis.osmbinary.*",
     name := "osm4scala-core",
