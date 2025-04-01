@@ -57,7 +57,7 @@ lazy val ghpResolverSetting = Def.setting {
 }
 
 lazy val commonSettings = Seq(
-  organization := "com.github.valdo404",
+  organization := "io.github.valdo404",
   // ThisBuild / dynverSonatypeSnapshots := true, // Let dynver use its default snapshot handling
   // ThisBuild / dynverSeparator := "-", // Use standard separator
   scalaVersion := scala212,
